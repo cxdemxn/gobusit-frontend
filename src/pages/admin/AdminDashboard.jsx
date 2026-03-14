@@ -1,19 +1,50 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bus, Route, Calendar, Ticket, Plus, ChevronRight } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
-import { mockStats, mockSchedules } from '../../mock/data'
+import { api } from '../../services/api'
 
 const fmt = (dt) => new Date(dt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  // TODO: GET /api/admin/stats
-  const stats = mockStats
-  // TODO: GET /api/schedules?date=today
-  const todaySchedules = mockSchedules.slice(0, 3)
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const data = await api.get('/api/admin/dashboard/stats')
+        setStats(data)
+      } catch (error) {
+        console.error('Failed to load dashboard stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadStats()
+  }, [])
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-400">Loading dashboard...</div>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  if (!stats) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-400">Failed to load dashboard</div>
+        </div>
+      </AdminLayout>
+    )
+  }
   const StatCard = ({ icon: Icon, label, value, color }) => (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3 ${color}`}>
@@ -70,7 +101,7 @@ export default function AdminDashboard() {
             </button>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            {todaySchedules.length === 0 ? (
+            {stats.todaysSchedules.length === 0 ? (
               <p className="text-gray-400 text-sm text-center py-8">No schedules today.</p>
             ) : (
               <table className="w-full text-sm">
@@ -85,15 +116,15 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {todaySchedules.map((s, i) => (
+                  {stats.todaysSchedules.map((s, i) => (
                     <tr
                       key={s.id}
                       onClick={() => navigate(`/admin/schedules/${s.id}`)}
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50 cursor-pointer transition"
                     >
-                      <td className="px-5 py-3.5 font-medium text-gray-900">{s.route.origin} → {s.route.destination}</td>
+                      <td className="px-5 py-3.5 font-medium text-gray-900">{s.originName} → {s.destinationName}</td>
                       <td className="px-4 py-3.5 text-gray-500">{fmt(s.departureTime)}</td>
-                      <td className="px-4 py-3.5 text-gray-500">{s.bus.plateNumber}</td>
+                      <td className="px-4 py-3.5 text-gray-500">{s.plateNumber}</td>
                       <td className="px-4 py-3.5"><Badge status={s.status} /></td>
                       <td className="px-4 py-3.5 text-right text-gray-500">{s.bookedSeats}/{s.totalSeats}</td>
                       <td className="px-4 py-3.5 text-right"><ChevronRight className="w-4 h-4 text-gray-300 ml-auto" /></td>
