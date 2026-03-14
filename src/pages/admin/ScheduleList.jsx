@@ -23,6 +23,21 @@ export default function ScheduleList() {
   const [loading, setLoading] = useState(true)
   const [totalPages, setTotalPages] = useState(1)
 
+  const handleRouteFilterChange = (value) => {
+    setRouteFilter(value)
+    setPage(1)
+  }
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  const handleDateFilterChange = (value) => {
+    setDateFilter(value)
+    setPage(1)
+  }
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -62,17 +77,17 @@ export default function ScheduleList() {
         <div className="flex flex-wrap gap-3">
           <select
             value={routeFilter}
-            onChange={e => setRouteFilter(e.target.value)}
+            onChange={e => handleRouteFilterChange(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Routes</option>
             {routes.map(r => (
-              <option key={r.id} value={r.id}>{r.origin} → {r.destination}</option>
+              <option key={r.uuid} value={r.uuid}>{r.originName} → {r.destinationName}</option>
             ))}
           </select>
           <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+            onChange={e => handleStatusFilterChange(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {STATUSES.map(s => <option key={s} value={s}>{s === 'ALL' ? 'All Statuses' : s}</option>)}
@@ -80,7 +95,7 @@ export default function ScheduleList() {
           <input
             type="date"
             value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
+            onChange={e => handleDateFilterChange(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -109,9 +124,9 @@ export default function ScheduleList() {
                       onClick={() => navigate(`/admin/schedules/${s.id}`)}
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50 cursor-pointer transition"
                     >
-                      <td className="px-5 py-3.5 font-medium text-gray-900">{s.route.origin} → {s.route.destination}</td>
+                      <td className="px-5 py-3.5 font-medium text-gray-900">{s.originName} → {s.destinationName}</td>
                       <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{fmt(s.departureTime)}</td>
-                      <td className="px-4 py-3.5 text-gray-500">{s.bus.plateNumber}</td>
+                      <td className="px-4 py-3.5 text-gray-500">{s.plateNumber}</td>
                       <td className="px-4 py-3.5 text-right text-gray-700 font-medium">{s.price.toLocaleString()}</td>
                       <td className="px-4 py-3.5"><Badge status={s.status} /></td>
                       <td className="px-4 py-3.5 text-right text-gray-500">{s.bookedSeats}/{s.totalSeats}</td>

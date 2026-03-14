@@ -6,6 +6,18 @@ import { scheduleService } from '../../services/scheduleService'
 import { routeService } from '../../services/routeService'
 import { busService } from '../../services/busService'
 
+const Field = ({ name, label, type = 'text', children, form, errors, onChange, helper }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    {children || (
+      <input type={type} name={name} value={form[name]} onChange={onChange}
+        className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[name] ? 'border-red-400' : 'border-gray-200'}`} />
+    )}
+    {helper && !errors[name] && <p className="text-xs text-gray-400 mt-1">{helper}</p>}
+    {errors[name] && <p className="text-xs text-red-600 mt-1">{errors[name]}</p>}
+  </div>
+)
+
 export default function ScheduleForm() {
   const navigate = useNavigate()
   const [routes, setRoutes] = useState([])
@@ -77,17 +89,6 @@ export default function ScheduleForm() {
     }
   }
 
-  const Field = ({ name, label, type = 'text', children, helper }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {children || (
-        <input type={type} name={name} value={form[name]} onChange={handleChange}
-          className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[name] ? 'border-red-400' : 'border-gray-200'}`} />
-      )}
-      {helper && !errors[name] && <p className="text-xs text-gray-400 mt-1">{helper}</p>}
-      {errors[name] && <p className="text-xs text-red-600 mt-1">{errors[name]}</p>}
-    </div>
-  )
 
   return (
     <AdminLayout>
@@ -99,32 +100,32 @@ export default function ScheduleForm() {
 
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Field name="routeId" label="Route">
+            <Field name="routeId" label="Route" form={form} errors={errors} onChange={handleChange}>
               <select name="routeId" value={form.routeId} onChange={handleChange}
                 className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.routeId ? 'border-red-400' : 'border-gray-200'}`}>
                 <option value="">Select a route…</option>
-                {routes.map(r => <option key={r.id} value={r.id}>{r.origin} → {r.destination}</option>)}
+                {routes.map(r => <option key={r.uuid} value={r.uuid}>{r.originName} → {r.destinationName}</option>)}
               </select>
               {errors.routeId && <p className="text-xs text-red-600 mt-1">{errors.routeId}</p>}
             </Field>
 
-            <Field name="busId" label="Bus" helper="Only active buses are shown">
+            <Field name="busId" label="Bus" helper="Only active buses are shown" form={form} errors={errors} onChange={handleChange}>
               <select name="busId" value={form.busId} onChange={handleChange}
                 className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.busId ? 'border-red-400' : 'border-gray-200'}`}>
                 <option value="">Select a bus…</option>
-                {buses.map(b => <option key={b.id} value={b.id}>{b.plateNumber} — {b.capacity} seats</option>)}
+                {buses.map(b => <option key={b.uuid} value={b.uuid}>{b.plateNumber} — {b.capacity} seats</option>)}
               </select>
               {errors.busId && <p className="text-xs text-red-600 mt-1">{errors.busId}</p>}
             </Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field name="departureTime" label="Departure" type="datetime-local" />
-              <Field name="arrivalTime" label="Arrival" type="datetime-local" />
+              <Field name="departureTime" label="Departure" type="datetime-local" form={form} errors={errors} onChange={handleChange} />
+              <Field name="arrivalTime" label="Arrival" type="datetime-local" form={form} errors={errors} onChange={handleChange} />
             </div>
 
-            <Field name="price" label="Price (FCFA)" type="number" />
+            <Field name="price" label="Price (FCFA)" type="number" form={form} errors={errors} onChange={handleChange} />
 
-            <Field name="status" label="Status">
+            <Field name="status" label="Status" form={form} errors={errors} onChange={handleChange}>
               <select name="status" value={form.status} onChange={handleChange}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="SCHEDULED">Scheduled</option>

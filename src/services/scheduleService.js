@@ -4,9 +4,9 @@ export const scheduleService = {
   getAll: async (filters = {}) => {
     const params = new URLSearchParams()
     if (filters.routeId) params.append('routeId', filters.routeId)
-    if (filters.status) params.append('status', filters.status)
+    if (filters.status && filters.status !== 'ALL') params.append('status', filters.status)
     if (filters.date) params.append('date', filters.date)
-    if (filters.page) params.append('page', filters.page)
+    if (filters.page) params.append('page', filters.page - 1)
     
     const query = params.toString()
     return await api.get(`/api/admin/schedules${query ? '?' + query : ''}`)

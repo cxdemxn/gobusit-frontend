@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import { mockSchedules, mockRoutes, mockBuses } from '../../mock/data'
+import { scheduleService } from '../../services/scheduleService'
+import { routeService } from '../../services/routeService'
+import { busService } from '../../services/busService'
+import { api } from '../../services/api'
 
 const fmt = (dt) => new Date(dt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
@@ -14,21 +17,51 @@ const CANCELLABLE = ['SCHEDULED', 'BOARDING', 'IN_TRANSIT']
 export default function AdminScheduleDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-
-  const existing = mockSchedules.find(s => s.id === Number(id))
-  const [schedule, setSchedule] = useState(existing)
+  const [schedule, setSchedule] = useState(null)
+  const [routes, setRoutes] = useState([])
+  const [buses, setBuses] = useState([])
+  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({
-    routeId: schedule?.route.id || '',
-    busId: schedule?.bus.id || '',
-    departureTime: schedule?.departureTime?.slice(0, 16) || '',
-    arrivalTime: schedule?.arrivalTime?.slice(0, 16) || '',
-    price: schedule?.price || '',
+    routeId: '',
+    busId: '',
+    departureTime: '',
+    arrivalTime: '',
+    price: '',
   })
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [showCancel, setShowCancel] = useState(false)
   const [showComplete, setShowComplete] = useState(false)
 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [scheduleData, routesData, busesData] = await Promise.all([
+          scheduleService.getById(id),
+          routeService.getAll(),
+          busService.getAll()
+        ])
+        setSchedule(scheduleData)
+        setRoutes(routesData)
+        setBuses(busesData)
+        setForm({
+          routeId: scheduleData.routeId || '',
+          busId: scheduleData.busId || '',
+          departureTime: scheduleData.departureTime?.slice(0, 16) || '',
+          arrivalTime: scheduleData.arrivalTime?.slice(0, 16) || '',
+          price: scheduleData.price || '',
+        })
+      } catch (error) {
+        console.error('Failed to load schedule:', error)
+        navigate('/admin/schedules')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [id, navigate])
+
+  if (loading) return <AdminLayout><div className="text-center py-16 text-gray-400">Loading...</div></AdminLayout>
   if (!schedule) return <AdminLayout><div className="text-center py-16 text-gray-400">Schedule not found.</div></AdminLayout>
 
   const isCancelled = schedule.status === 'CANCELLED'
@@ -55,31 +88,50 @@ export default function AdminScheduleDetail() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
     try {
-      // TODO: PUT /api/schedules/:id
-      // On conflict (bus overlap): show error
+      await scheduleService.update(id, form)
+      const updated = await scheduleService.getById(id)
+      setSchedule(updated)
+    } catch (error) {
+      if (error.status === 409) {
+        setErrors({ busId: 'This bus is already assigned to another schedule at this time.' })
+      } else {
+        console.error('Failed to save schedule:', error)
+      }
     } finally {
       setSaving(false)
     }
   }
 
-  const handleCancel = () => {
-    // TODO: POST /api/schedules/:id/cancel
-    setSchedule({ ...schedule, status: 'CANCELLED' })
-    setShowCancel(false)
+  const handleCancel = async () => {
+    try {
+      const updated = await scheduleService.cancel(id)
+      setSchedule(updated)
+      setShowCancel(false)
+    } catch (error) {
+      console.error('Failed to cancel schedule:', error)
+    }
   }
 
-  const handleAdvance = () => {
-    // TODO: PATCH /api/schedules/:id/status { status: nextStatus }
-    setSchedule({ ...schedule, status: nextStatus })
+  const handleAdvance = async () => {
+    try {
+      const updated = await api.patch(`/api/admin/schedules/${id}/status`, { status: nextStatus })
+      setSchedule(updated)
+    } catch (error) {
+      console.error('Failed to advance status:', error)
+    }
   }
 
-  const handleComplete = () => {
-    // TODO: POST /api/schedules/:id/complete — sets ARRIVED, marks all tickets USED
-    setSchedule({ ...schedule, status: 'ARRIVED' })
-    setShowComplete(false)
+  const handleComplete = async () => {
+    try {
+      const updated = await api.patch(`/api/admin/schedules/${id}/complete`)
+      setSchedule(updated)
+      setShowComplete(false)
+    } catch (error) {
+      console.error('Failed to complete schedule:', error)
+    }
   }
 
-  const activeBuses = mockBuses.filter(b => b.status === 'ACTIVE')
+  const activeBuses = buses.filter(b => b.status === 'ACTIVE')
 
   return (
     <AdminLayout>
@@ -107,7 +159,7 @@ export default function AdminScheduleDetail() {
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-700"><ArrowLeft className="w-5 h-5" /></button>
           <div>
-            <h1 className="text-xl font-extrabold text-gray-900">{schedule.route.origin} → {schedule.route.destination}</h1>
+            <h1 className="text-xl font-extrabold text-gray-900">{schedule.originName} → {schedule.destinationName}</h1>
             <p className="text-sm text-gray-400">{fmt(schedule.departureTime)}</p>
           </div>
           <div className="ml-auto"><Badge status={schedule.status} /></div>
@@ -145,14 +197,14 @@ export default function AdminScheduleDetail() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Route</label>
                 <select name="routeId" value={form.routeId} onChange={handleChange}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  {mockRoutes.map(r => <option key={r.id} value={r.id}>{r.origin} → {r.destination}</option>)}
+                  {routes.map(r => <option key={r.uuid} value={r.uuid}>{r.originName} → {r.destinationName}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bus (Active only)</label>
                 <select name="busId" value={form.busId} onChange={handleChange}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  {activeBuses.map(b => <option key={b.id} value={b.id}>{b.plateNumber} ({b.capacity} seats)</option>)}
+                  {activeBuses.map(b => <option key={b.uuid} value={b.uuid}>{b.plateNumber} ({b.capacity} seats)</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
