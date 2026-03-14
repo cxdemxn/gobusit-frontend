@@ -4,12 +4,12 @@ import { Bus, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
-  const { login, setUser } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from || null
 
-  const [form, setForm] = useState({ phone: '', password: '' })
+  const [form, setForm] = useState({ phoneNumber: '', password: '' })
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,16 +21,13 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      // TODO: replace with real login call
-      // const user = await login(form.phone, form.password)
-      // Simulate: mock login for UI preview
-      const { mockAdmin, mockUser } = await import('../mock/data')
-      const user = form.phone === mockAdmin.phone ? mockAdmin : mockUser
-      setUser(user)
-      const dest = from || (user.role === 'ADMIN' ? '/admin' : '/home')
+      const roles = await login(form.phoneNumber, form.password)
+      const dest = from || (roles[0] === 'ADMIN' ? '/admin' : '/home')
+      console.log(dest)
       navigate(dest, { replace: true })
     } catch (err) {
-      setError('Incorrect phone number or password.')
+      console.log("Login error:", err)
+      setError(err.message || 'Incorrect phone number or password.')
     } finally {
       setLoading(false)
     }
@@ -53,9 +50,9 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
               <input
                 type="tel"
-                name="phone"
+                name="phoneNumber"
                 placeholder="+229 61 000 001"
-                value={form.phone}
+                value={form.phoneNumber}
                 onChange={handleChange}
                 required
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

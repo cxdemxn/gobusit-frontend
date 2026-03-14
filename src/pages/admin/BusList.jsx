@@ -1,17 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ChevronRight } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
-import { mockBuses } from '../../mock/data'
+import { busService } from '../../services/busService'
 
 export default function BusList() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState('ALL')
+  const [buses, setBuses] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // TODO: GET /api/buses
-  const buses = mockBuses.filter(b => filter === 'ALL' || b.status === filter)
+  useEffect(() => {
+    const loadBuses = async () => {
+      try {
+        const data = await busService.getAll()
+        setBuses(data)
+      } catch (error) {
+        console.error('Failed to load buses:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadBuses()
+  }, [])
+
+  const filteredBuses = buses.filter(b => filter === 'ALL' || b.status === filter)
 
   return (
     <AdminLayout>
@@ -44,7 +59,7 @@ export default function BusList() {
           ))}
         </div>
 
-        {buses.length === 0 ? (
+        {filteredBuses.length === 0 ? (
           <EmptyState icon="🚌" title="No buses found" message="No buses match this filter." />
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -58,7 +73,7 @@ export default function BusList() {
                 </tr>
               </thead>
               <tbody>
-                {buses.map(bus => (
+                {filteredBuses.map(bus => (
                   <tr
                     key={bus.id}
                     onClick={() => navigate(`/admin/buses/${bus.id}`)}

@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import PassengerLayout from '../../components/layout/PassengerLayout'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
 import Paginator from '../../components/ui/Paginator'
-import { mockTickets } from '../../mock/data'
+import { ticketService } from '../../services/ticketService'
 
 const fmt = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 const fmtTime = (dt) => new Date(dt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -14,12 +14,26 @@ export default function MyTickets() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('upcoming')
   const [page, setPage] = useState(1)
+  const [tickets, setTickets] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // TODO: GET /api/tickets/my — returns all tickets, sorted newest first
-  const all = mockTickets
+  useEffect(() => {
+    const loadTickets = async () => {
+      try {
+        const data = await ticketService.getMyTickets()
+        setTickets(data.content || data)
+      } catch (error) {
+        console.error('Failed to load tickets:', error)
+        setTickets([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTickets()
+  }, [])
 
-  const upcoming = all.filter(t => t.status === 'BOOKED')
-  const past = all.filter(t => t.status !== 'BOOKED')
+  const upcoming = tickets.filter(t => t.status === 'BOOKED')
+  const past = tickets.filter(t => t.status !== 'BOOKED')
   const list = tab === 'upcoming' ? upcoming : past
 
   return (
@@ -77,10 +91,10 @@ export default function MyTickets() {
                       <span className="text-xs text-gray-400">{ticket.id}</span>
                     </div>
                     <p className="font-bold text-gray-900 text-sm truncate">
-                      {ticket.schedule.route.origin} → {ticket.schedule.route.destination}
+                      {ticket.originName} → {ticket.destinationName}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {fmt(ticket.schedule.departureTime)} at {fmtTime(ticket.schedule.departureTime)} · Seat {ticket.seatNumber}
+                      {fmt(ticket.departureTime)} at {fmtTime(ticket.departureTime)} · Seat {ticket.seatNumber}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">{ticket.price.toLocaleString()} FCFA</p>
                   </div>

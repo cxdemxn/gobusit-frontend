@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ChevronRight } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
 import Paginator from '../../components/ui/Paginator'
-import { mockSchedules, mockRoutes } from '../../mock/data'
+import { scheduleService } from '../../services/scheduleService'
+import { routeService } from '../../services/routeService'
 
 const fmt = (dt) => new Date(dt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -17,12 +18,29 @@ export default function ScheduleList() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [dateFilter, setDateFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [schedules, setSchedules] = useState([])
+  const [routes, setRoutes] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
 
-  // TODO: GET /api/schedules?routeId=&status=&date=
-  const schedules = mockSchedules
-    .filter(s => !routeFilter || s.route.id === Number(routeFilter))
-    .filter(s => statusFilter === 'ALL' || s.status === statusFilter)
-    .filter(s => !dateFilter || s.departureTime.startsWith(dateFilter))
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [schedulesData, routesData] = await Promise.all([
+          scheduleService.getAll({ routeId: routeFilter, status: statusFilter, date: dateFilter, page }),
+          routeService.getAll()
+        ])
+        setSchedules(schedulesData.content || schedulesData)
+        setRoutes(routesData)
+        setTotalPages(schedulesData.totalPages || 1)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [routeFilter, statusFilter, dateFilter, page])
 
   return (
     <AdminLayout>
@@ -48,7 +66,7 @@ export default function ScheduleList() {
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Routes</option>
-            {mockRoutes.map(r => (
+            {routes.map(r => (
               <option key={r.id} value={r.id}>{r.origin} → {r.destination}</option>
             ))}
           </select>
@@ -103,7 +121,7 @@ export default function ScheduleList() {
                 </tbody>
               </table>
             </div>
-            <Paginator page={page} totalPages={1} onChange={setPage} />
+            <Paginator page={page} totalPages={totalPages} onChange={setPage} />
           </>
         )}
       </div>

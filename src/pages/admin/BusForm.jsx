@@ -1,24 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import { mockBuses } from '../../mock/data'
+import { busService } from '../../services/busService'
 
 export default function BusForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
-  const existing = isEdit ? mockBuses.find(b => b.id === Number(id)) : null
+  const [existing, setExisting] = useState(null)
+  const [loading, setLoading] = useState(isEdit)
 
   const [form, setForm] = useState({
-    plateNumber: existing?.plateNumber || '',
-    capacity: existing?.capacity || '',
-    status: existing?.status || 'ACTIVE',
+    plateNumber: '',
+    capacity: '',
+    status: 'ACTIVE',
   })
   const [errors, setErrors] = useState({})
   const [showDelete, setShowDelete] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (isEdit) {
+      const loadBus = async () => {
+        try {
+          const data = await busService.getById(id)
+          setExisting(data)
+          setForm({
+            plateNumber: data.plateNumber || '',
+            capacity: data.capacity || '',
+            status: data.status || 'ACTIVE',
+          })
+        } catch (error) {
+          console.error('Failed to load bus:', error)
+          navigate('/admin/buses')
+        } finally {
+          setLoading(false)
+        }
+      }
+      loadBus()
+    }
+  }, [id, isEdit, navigate])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -38,17 +61,30 @@ export default function BusForm() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
     try {
-      // TODO: isEdit ? PUT /api/buses/:id : POST /api/buses
-      // On 409 (duplicate plate): setErrors({ plateNumber: 'A bus with this plate number already exists.' })
+      if (isEdit) {
+        await busService.update(id, form)
+      } else {
+        await busService.create(form)
+      }
       navigate('/admin/buses')
+    } catch (error) {
+      if (error.status === 409) {
+        setErrors({ plateNumber: 'A bus with this plate number already exists.' })
+      } else {
+        console.error('Failed to save bus:', error)
+      }
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async () => {
-    // TODO: DELETE /api/buses/:id
-    navigate('/admin/buses')
+    try {
+      await busService.delete(id)
+      navigate('/admin/buses')
+    } catch (error) {
+      console.error('Failed to delete bus:', error)
+    }
   }
 
   return (

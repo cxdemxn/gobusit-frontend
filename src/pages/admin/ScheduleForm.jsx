@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
-import { mockRoutes, mockBuses } from '../../mock/data'
+import { scheduleService } from '../../services/scheduleService'
+import { routeService } from '../../services/routeService'
+import { busService } from '../../services/busService'
 
 export default function ScheduleForm() {
   const navigate = useNavigate()
-  const activeBuses = mockBuses.filter(b => b.status === 'ACTIVE')
+  const [routes, setRoutes] = useState([])
+  const [buses, setBuses] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const [form, setForm] = useState({
     routeId: '',
@@ -18,6 +22,24 @@ export default function ScheduleForm() {
   })
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [routesData, busesData] = await Promise.all([
+          routeService.getAll(),
+          busService.getAll()
+        ])
+        setRoutes(routesData)
+        setBuses(busesData.filter(b => b.status === 'ACTIVE'))
+      } catch (error) {
+        console.error('Failed to load data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -42,9 +64,14 @@ export default function ScheduleForm() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
     try {
-      // TODO: POST /api/schedules
-      // On 409 bus conflict: setErrors({ busId: "This bus is already scheduled during this time..." })
+      await scheduleService.create(form)
       navigate('/admin/schedules')
+    } catch (error) {
+      if (error.status === 409) {
+        setErrors({ busId: "This bus is already scheduled during this time..." })
+      } else {
+        console.error('Failed to create schedule:', error)
+      }
     } finally {
       setSaving(false)
     }
@@ -76,7 +103,7 @@ export default function ScheduleForm() {
               <select name="routeId" value={form.routeId} onChange={handleChange}
                 className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.routeId ? 'border-red-400' : 'border-gray-200'}`}>
                 <option value="">Select a route…</option>
-                {mockRoutes.map(r => <option key={r.id} value={r.id}>{r.origin} → {r.destination}</option>)}
+                {routes.map(r => <option key={r.id} value={r.id}>{r.origin} → {r.destination}</option>)}
               </select>
               {errors.routeId && <p className="text-xs text-red-600 mt-1">{errors.routeId}</p>}
             </Field>
@@ -85,7 +112,7 @@ export default function ScheduleForm() {
               <select name="busId" value={form.busId} onChange={handleChange}
                 className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.busId ? 'border-red-400' : 'border-gray-200'}`}>
                 <option value="">Select a bus…</option>
-                {activeBuses.map(b => <option key={b.id} value={b.id}>{b.plateNumber} — {b.capacity} seats</option>)}
+                {buses.map(b => <option key={b.id} value={b.id}>{b.plateNumber} — {b.capacity} seats</option>)}
               </select>
               {errors.busId && <p className="text-xs text-red-600 mt-1">{errors.busId}</p>}
             </Field>

@@ -1,30 +1,61 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import { mockUsers } from '../../mock/data'
+import { userService } from '../../services/userService'
 
 export default function UserDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [user, setUser] = useState(mockUsers.find(u => u.id === Number(id)))
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [showRoleConfirm, setShowRoleConfirm] = useState(false)
   const [showStatusConfirm, setShowStatusConfirm] = useState(false)
 
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await userService.getById(id)
+        setUser(userData)
+      } catch (error) {
+        console.error('Failed to load user:', error)
+        navigate('/admin/users')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadUser()
+  }, [id, navigate])
+
+  if (loading) return <AdminLayout><div className="text-center py-16 text-gray-400">Loading...</div></AdminLayout>
   if (!user) return <AdminLayout><div className="text-center py-16 text-gray-400">User not found.</div></AdminLayout>
 
-  const handleChangeRole = () => {
-    // TODO: PATCH /api/admin/users/:id/role { role: newRole }
-    setUser({ ...user, role: user.role === 'ADMIN' ? 'USER' : 'ADMIN' })
-    setShowRoleConfirm(false)
+  const handleChangeRole = async () => {
+    try {
+      const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN'
+      await userService.updateRole(id, newRole)
+      setUser({ ...user, role: newRole })
+      setShowRoleConfirm(false)
+    } catch (error) {
+      console.error('Failed to change role:', error)
+    }
   }
 
-  const handleToggleStatus = () => {
-    // TODO: PATCH /api/admin/users/:id/status { enabled: !user.enabled }
-    setUser({ ...user, enabled: !user.enabled })
-    setShowStatusConfirm(false)
+  const handleToggleStatus = async () => {
+    try {
+      if (user.active) {
+        await userService.disable(id)
+        setUser({ ...user, active: false })
+      } else {
+        await userService.enable(id)
+        setUser({ ...user, active: true })
+      }
+      setShowStatusConfirm(false)
+    } catch (error) {
+      console.error('Failed to toggle status:', error)
+    }
   }
 
   const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN'
@@ -42,12 +73,12 @@ export default function UserDetail() {
       )}
       {showStatusConfirm && (
         <ConfirmDialog
-          title={user.enabled ? 'Disable this account?' : 'Enable this account?'}
-          message={user.enabled
+          title={user.active ? 'Disable this account?' : 'Enable this account?'}
+          message={user.active
             ? 'The user will be immediately locked out of their account. Their existing session will stop working.'
             : 'The user will be able to log in again immediately.'}
-          confirmLabel={user.enabled ? 'Disable Account' : 'Enable Account'}
-          danger={user.enabled}
+          confirmLabel={user.active ? 'Disable Account' : 'Enable Account'}
+          danger={user.active}
           onConfirm={handleToggleStatus}
           onCancel={() => setShowStatusConfirm(false)}
         />
@@ -60,7 +91,7 @@ export default function UserDetail() {
         </div>
 
         {/* Disabled banner */}
-        {!user.enabled && (
+        {!user.active && (
           <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-sm text-red-700 font-medium">
             This account is currently disabled. The user cannot log in.
           </div>
@@ -89,7 +120,7 @@ export default function UserDetail() {
             </div>
             <div className="flex justify-between items-center py-2">
               <span className="text-sm text-gray-400">Account Status</span>
-              <Badge status={user.enabled ? 'Active' : 'Disabled'} />
+              <Badge status={user.active ? 'Active' : 'Disabled'} />
             </div>
           </div>
         </div>
@@ -110,12 +141,12 @@ export default function UserDetail() {
             <button
               onClick={() => setShowStatusConfirm(true)}
               className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
-                user.enabled
+                user.active
                   ? 'bg-red-100 text-red-700 hover:bg-red-200'
                   : 'bg-green-100 text-green-700 hover:bg-green-200'
               }`}
             >
-              {user.enabled ? 'Disable Account' : 'Enable Account'}
+              {user.active ? 'Disable Account' : 'Enable Account'}
             </button>
           </div>
         </div>

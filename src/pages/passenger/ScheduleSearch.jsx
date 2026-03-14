@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, MapPin, Calendar, Bus, ChevronRight } from 'lucide-react'
 import PassengerLayout from '../../components/layout/PassengerLayout'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
-import { mockSchedules } from '../../mock/data'
+import { passengerScheduleService } from '../../services/passengerScheduleService'
 import { useAuth } from '../../context/AuthContext'
+import ScheduleResults from './ScheduleResults'
 
 const fmt = (dt) => new Date(dt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 const fmtDate = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -13,17 +14,67 @@ const fmtDate = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: 'numeric
 export default function ScheduleSearch() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [originName, setOriginName] = useState('')
+  const [destinationName, setDestinationName] = useState('')
   const [date, setDate] = useState('')
+  const [schedules, setSchedules] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [searchTrigger, setSearchTrigger] = useState(0)
 
-  // TODO: replace with GET /api/schedules?from=&to=&date= (only SCHEDULED + BOARDING returned by backend)
-  const visibleStatuses = ['SCHEDULED', 'BOARDING']
-  const filtered = mockSchedules
-    .filter(s => visibleStatuses.includes(s.status))
-    .filter(s => !from || s.route.origin.toLowerCase().includes(from.toLowerCase()))
-    .filter(s => !to || s.route.destination.toLowerCase().includes(to.toLowerCase()))
-    .filter(s => !date || s.departureTime.startsWith(date))
+  // Initial load on mount
+  useEffect(() => {
+    const loadInitialSchedules = async () => {
+      setLoading(true)
+      try {
+        const data = await passengerScheduleService.getAll({})
+        setSchedules(data)
+      } catch (error) {
+        console.error('Failed to load initial schedules:', error)
+        setSchedules([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadInitialSchedules()
+  }, []) // Run only once on mount
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (originName || destinationName || date) {
+        const loadSchedules = async () => {
+          setLoading(true)
+          try {
+            const data = await passengerScheduleService.getAll({ originName, destinationName, date })
+            setSchedules(data)
+          } catch (error) {
+            console.error('Failed to load schedules:', error)
+            setSchedules([])
+          } finally {
+            setLoading(false)
+          }
+        }
+        loadSchedules()
+      } else {
+        // Reset to all schedules when filters are cleared
+        const loadAllSchedules = async () => {
+          setLoading(true)
+          try {
+            const data = await passengerScheduleService.getAll({})
+            setSchedules(data)
+          } catch (error) {
+            console.error('Failed to load all schedules:', error)
+            setSchedules([])
+          } finally {
+            setLoading(false)
+          }
+        }
+        loadAllSchedules()
+      }
+    }, 300) // 300ms debounce
+
+    return () => clearTimeout(timer)
+  }, [originName, destinationName, date, searchTrigger])
 
   const availableSeats = (s) => s.totalSeats - s.bookedSeats
 
@@ -31,11 +82,11 @@ export default function ScheduleSearch() {
     <div className="min-h-screen bg-gray-50">
       {user ? (
         <PassengerLayout>
-          <Content navigate={navigate} from={from} setFrom={setFrom} to={to} setTo={setTo} date={date} setDate={setDate} filtered={filtered} availableSeats={availableSeats} />
+          <Content navigate={navigate} originName={originName} setOriginName={setOriginName} destinationName={destinationName} setDestinationName={setDestinationName} date={date} setDate={setDate} schedules={schedules} loading={loading} availableSeats={availableSeats} />
         </PassengerLayout>
       ) : (
         <GuestWrapper navigate={navigate}>
-          <Content navigate={navigate} from={from} setFrom={setFrom} to={to} setTo={setTo} date={date} setDate={setDate} filtered={filtered} availableSeats={availableSeats} />
+          <Content navigate={navigate} originName={originName} setOriginName={setOriginName} destinationName={destinationName} setDestinationName={setDestinationName} date={date} setDate={setDate} schedules={schedules} loading={loading} availableSeats={availableSeats} />
         </GuestWrapper>
       )}
     </div>
@@ -57,7 +108,7 @@ function GuestWrapper({ children, navigate }) {
   )
 }
 
-function Content({ navigate, from, setFrom, to, setTo, date, setDate, filtered, availableSeats }) {
+function Content({ navigate, originName, setOriginName, destinationName, setDestinationName, date, setDate, schedules, loading, availableSeats }) {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-extrabold text-gray-900">Find a Bus</h1>
@@ -69,8 +120,8 @@ function Content({ navigate, from, setFrom, to, setTo, date, setDate, filtered, 
           <input
             type="text"
             placeholder="From (e.g. Cotonou)"
-            value={from}
-            onChange={e => setFrom(e.target.value)}
+            value={originName}
+            onChange={e => setOriginName(e.target.value)}
             className="flex-1 bg-transparent text-sm outline-none"
           />
         </div>
@@ -79,8 +130,8 @@ function Content({ navigate, from, setFrom, to, setTo, date, setDate, filtered, 
           <input
             type="text"
             placeholder="To (e.g. Lagos)"
-            value={to}
-            onChange={e => setTo(e.target.value)}
+            value={destinationName}
+            onChange={e => setDestinationName(e.target.value)}
             className="flex-1 bg-transparent text-sm outline-none"
           />
         </div>
@@ -95,60 +146,13 @@ function Content({ navigate, from, setFrom, to, setTo, date, setDate, filtered, 
         </div>
       </div>
 
-      {/* Results */}
-      <p className="text-xs text-gray-400 font-medium px-1">{filtered.length} trip{filtered.length !== 1 ? 's' : ''} found</p>
-
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon="🚌"
-          title="No trips found"
-          message="No trips match your search. Try different dates or locations."
-        />
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(s => {
-            const seats = availableSeats(s)
-            const full = seats <= 0
-            return (
-              <button
-                key={s.id}
-                onClick={() => navigate(`/schedule/${s.id}`)}
-                disabled={full}
-                className={`w-full bg-white rounded-2xl border p-4 text-left transition hover:shadow-sm ${full ? 'opacity-60 border-gray-100' : 'border-gray-100 hover:border-blue-200'}`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-bold text-gray-900 text-base">
-                      {s.route.origin} → {s.route.destination}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{fmtDate(s.departureTime)}</p>
-                  </div>
-                  <Badge status={s.status} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>{fmt(s.departureTime)} → {fmt(s.arrivalTime)}</span>
-                    <span className="text-gray-300">|</span>
-                    <span className="font-semibold text-gray-900">
-                      {s.price.toLocaleString()} FCFA
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                </div>
-                <div className="mt-2">
-                  {full ? (
-                    <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Fully Booked</span>
-                  ) : seats <= 5 ? (
-                    <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Only {seats} seats left!</span>
-                  ) : (
-                    <span className="text-xs text-gray-400">{seats} seats available</span>
-                  )}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {/* Results - This is now a separate component */}
+      <ScheduleResults 
+        schedules={schedules} 
+        loading={loading} 
+        availableSeats={availableSeats} 
+        navigate={navigate} 
+      />
     </div>
   )
 }

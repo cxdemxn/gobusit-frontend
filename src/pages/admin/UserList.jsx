@@ -1,16 +1,32 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import Paginator from '../../components/ui/Paginator'
-import { mockUsers } from '../../mock/data'
-import { useState } from 'react'
+import { userService } from '../../services/userService'
 
 export default function UserList() {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
-  // TODO: GET /api/admin/users
-  const users = mockUsers
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const data = await userService.getAll(page)
+        setUsers(data.content || data)
+        setTotalPages(data.totalPages || 1)
+      } catch (error) {
+        console.error('Failed to load users:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadUsers()
+  }, [page])
 
   return (
     <AdminLayout>
@@ -42,15 +58,15 @@ export default function UserList() {
                   <td className="px-5 py-3.5 font-medium text-gray-900">{u.firstName} {u.lastName}</td>
                   <td className="px-4 py-3.5 text-gray-500">{u.phone}</td>
                   <td className="px-4 py-3.5 text-gray-400 hidden sm:table-cell">{u.email}</td>
-                  <td className="px-4 py-3.5"><Badge status={u.role} /></td>
-                  <td className="px-4 py-3.5"><Badge status={u.enabled ? 'Active' : 'Disabled'} /></td>
+                  <td className="px-4 py-3.5"><Badge status={u.roles[0]} /></td>
+                  <td className="px-4 py-3.5"><Badge status={u.active ? 'Active' : 'Disabled'} /></td>
                   <td className="px-4 py-3.5 text-right"><ChevronRight className="w-4 h-4 text-gray-300 ml-auto" /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <Paginator page={page} totalPages={1} onChange={setPage} />
+        <Paginator page={page} totalPages={totalPages} onChange={setPage} />
       </div>
     </AdminLayout>
   )

@@ -1,13 +1,28 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ChevronRight } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import EmptyState from '../../components/ui/EmptyState'
-import { mockRoutes } from '../../mock/data'
+import { routeService } from '../../services/routeService'
 
 export default function RouteList() {
   const navigate = useNavigate()
-  // TODO: GET /api/routes
-  const routes = mockRoutes
+  const [routes, setRoutes] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadRoutes = async () => {
+      try {
+        const data = await routeService.getAll()
+        setRoutes(data)
+      } catch (error) {
+        console.error('Failed to load routes:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadRoutes()
+  }, [])
 
   return (
     <AdminLayout>

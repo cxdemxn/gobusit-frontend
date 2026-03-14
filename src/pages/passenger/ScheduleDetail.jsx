@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Bus, Clock, MapPin, AlertCircle } from 'lucide-react'
 import PassengerLayout from '../../components/layout/PassengerLayout'
 import Badge from '../../components/ui/Badge'
-import { mockSchedules } from '../../mock/data'
+import { passengerScheduleService } from '../../services/passengerScheduleService'
+import { ticketService } from '../../services/ticketService'
 import { useAuth } from '../../context/AuthContext'
 
 const fmt = (dt) => new Date(dt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -16,9 +17,31 @@ export default function ScheduleDetail() {
   const [selectedSeat, setSelectedSeat] = useState(null)
   const [seatError, setSeatError] = useState('')
   const [booking, setBooking] = useState(false)
+  const [schedule, setSchedule] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  // TODO: GET /api/schedules/:id  (returns schedule + takenSeats list)
-  const schedule = mockSchedules.find(s => s.id === Number(id))
+  useEffect(() => {
+    const loadSchedule = async () => {
+      try {
+        const scheduleData = await passengerScheduleService.getById(id)
+        setSchedule(scheduleData)
+      } catch (error) {
+        console.error('Failed to load schedule:', error)
+        setSchedule(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadSchedule()
+  }, [id])
+
+  if (loading) {
+    return (
+      <PassengerLayout>
+        <div className="text-center py-16 text-gray-400">Loading schedule...</div>
+      </PassengerLayout>
+    )
+  }
 
   if (!schedule) {
     return (
@@ -28,7 +51,7 @@ export default function ScheduleDetail() {
     )
   }
 
-  const { route, bus, departureTime, arrivalTime, price, status, totalSeats, takenSeats } = schedule
+  const { originName, destinationName, plateNumber, totalSeats, availableSeats, takenSeats, departureTime, arrivalTime, price, status } = schedule
   const bookableStatuses = ['SCHEDULED', 'BOARDING']
   const isBookable = bookableStatuses.includes(status)
 
@@ -49,24 +72,20 @@ export default function ScheduleDetail() {
     if (!selectedSeat) return
     setBooking(true)
     try {
-      // TODO: POST /api/bookings { scheduleId: id, seatNumber: selectedSeat }
-      // On 409 conflict: setSeatError("Sorry, seat X was just taken. Please choose another seat.")
-      // On success: navigate to /booking-confirmation with ticket data
+      const ticket = await ticketService.bookTicket({ 
+        scheduleId: id, 
+        seatNumber: selectedSeat 
+      })
       navigate('/booking-confirmation', {
-        state: {
-          ticket: {
-            id: 'TK-' + Math.floor(Math.random() * 90000 + 10000),
-            schedule,
-            seatNumber: selectedSeat,
-            price,
-            status: 'BOOKED',
-            bookedAt: new Date().toISOString(),
-          }
-        }
+        state: { ticket }
       })
     } catch (err) {
-      setSeatError(`Sorry, seat ${selectedSeat} was just taken. Please choose another seat.`)
-      setSelectedSeat(null)
+      if (err.status === 409) {
+        setSeatError(`Sorry, seat ${selectedSeat} was just taken. Please choose another seat.`)
+        setSelectedSeat(null)
+      } else {
+        setSeatError('Failed to book seat. Please try again.')
+      }
     } finally {
       setBooking(false)
     }
@@ -95,7 +114,7 @@ export default function ScheduleDetail() {
         <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-lg font-extrabold text-gray-900">{route.origin} → {route.destination}</p>
+              <p className="text-lg font-extrabold text-gray-900">{originName} → {destinationName}</p>
               <p className="text-xs text-gray-400 mt-0.5">{fmtDate(departureTime)}</p>
             </div>
             <Badge status={status} />
@@ -115,13 +134,13 @@ export default function ScheduleDetail() {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1.5 text-gray-500">
               <Bus className="w-4 h-4" />
-              <span>{bus.plateNumber}</span>
+              <span>{plateNumber}</span>
             </div>
             <div className="text-blue-700 font-bold text-base">{price.toLocaleString()} FCFA</div>
           </div>
 
           {(() => {
-            const avail = totalSeats - takenSeats.length
+            const avail = availableSeats
             if (avail <= 0) return <p className="text-xs font-semibold text-red-500">Fully booked</p>
             if (avail <= 5) return <p className="text-xs font-semibold text-amber-600">Only {avail} seats left!</p>
             return <p className="text-xs text-gray-400">{avail} seats available</p>

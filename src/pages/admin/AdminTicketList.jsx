@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
 import Paginator from '../../components/ui/Paginator'
-import { mockAllTickets, mockSchedules } from '../../mock/data'
+import { ticketService } from '../../services/ticketService'
+import { scheduleService } from '../../services/scheduleService'
 
 const fmt = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -16,11 +17,29 @@ export default function AdminTicketList() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [scheduleFilter, setScheduleFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [tickets, setTickets] = useState([])
+  const [schedules, setSchedules] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
 
-  // TODO: GET /api/admin/tickets?status=&scheduleId=&userId=
-  const tickets = mockAllTickets
-    .filter(t => statusFilter === 'ALL' || t.status === statusFilter)
-    .filter(t => !scheduleFilter || t.schedule.id === Number(scheduleFilter))
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [ticketsData, schedulesData] = await Promise.all([
+          ticketService.getAll({ status: statusFilter, scheduleId: scheduleFilter, page }),
+          scheduleService.getAll()
+        ])
+        setTickets(ticketsData.content || ticketsData)
+        setSchedules(schedulesData)
+        setTotalPages(ticketsData.totalPages || 1)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [statusFilter, scheduleFilter, page])
 
   return (
     <AdminLayout>
@@ -39,7 +58,7 @@ export default function AdminTicketList() {
           <select value={scheduleFilter} onChange={e => setScheduleFilter(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">All Schedules</option>
-            {mockSchedules.map(s => (
+            {schedules.map(s => (
               <option key={s.id} value={s.id}>{s.route.origin} → {s.route.destination} ({fmt(s.departureTime)})</option>
             ))}
           </select>
@@ -81,7 +100,7 @@ export default function AdminTicketList() {
                 </tbody>
               </table>
             </div>
-            <Paginator page={page} totalPages={1} onChange={setPage} />
+            <Paginator page={page} totalPages={totalPages} onChange={setPage} />
           </>
         )}
       </div>

@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Bus } from 'lucide-react'
 import PassengerLayout from '../../components/layout/PassengerLayout'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import { mockTickets } from '../../mock/data'
+import { ticketService } from '../../services/ticketService'
 
 const fmt = (dt) => new Date(dt).toLocaleString('en-GB', {
   day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -14,18 +14,42 @@ export default function TicketDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [showConfirm, setShowConfirm] = useState(false)
-  const [ticket, setTicket] = useState(mockTickets.find(t => t.id === id))
+  const [ticket, setTicket] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadTicket = async () => {
+      try {
+        const ticketData = await ticketService.getMyTicketById(id)
+        setTicket(ticketData)
+      } catch (error) {
+        console.error('Failed to load ticket:', error)
+        setTicket(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTicket()
+  }, [id])
+
+  if (loading) {
+    return <PassengerLayout><div className="text-center py-16 text-gray-400">Loading ticket...</div></PassengerLayout>
+  }
 
   if (!ticket) {
     return <PassengerLayout><div className="text-center py-16 text-gray-400">Ticket not found.</div></PassengerLayout>
   }
 
-  const { schedule } = ticket
+  // No longer need to destructure schedule since data is now flattened
 
   const handleCancel = async () => {
-    // TODO: DELETE /api/tickets/:id  (or POST /api/tickets/:id/cancel)
-    setTicket({ ...ticket, status: 'CANCELLED' })
-    setShowConfirm(false)
+    try {
+      await ticketService.cancelMyTicket(id)
+      setTicket({ ...ticket, status: 'CANCELLED' })
+      setShowConfirm(false)
+    } catch (error) {
+      console.error('Failed to cancel ticket:', error)
+    }
   }
 
   const Row = ({ label, value }) => (
@@ -72,13 +96,13 @@ export default function TicketDetail() {
             </div>
           </div>
           <div className="px-5 py-2">
-            <Row label="Route" value={`${schedule.route.origin} → ${schedule.route.destination}`} />
-            <Row label="Bus" value={schedule.bus.plateNumber} />
-            <Row label="Departure" value={fmt(schedule.departureTime)} />
-            <Row label="Arrival" value={fmt(schedule.arrivalTime)} />
+            <Row label="Route" value={`${ticket.originName} → ${ticket.destinationName}`} />
+            <Row label="Bus" value={ticket.plateNumber} />
+            <Row label="Departure" value={fmt(ticket.departureTime)} />
+            <Row label="Arrival" value={fmt(ticket.arrivalTime)} />
             <Row label="Seat Number" value={ticket.seatNumber} />
             <Row label="Price Paid" value={`${ticket.price.toLocaleString()} FCFA`} />
-            <Row label="Booked At" value={fmt(ticket.bookedAt)} />
+            <Row label="Booked At" value={fmt(ticket.bookingTime)} />
           </div>
         </div>
 

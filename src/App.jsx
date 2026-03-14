@@ -31,20 +31,23 @@ import AdminTicketDetail from './pages/admin/AdminTicketDetail'
 
 // Route guards
 function RequireAuth({ children }) {
-  const { user } = useAuth()
+  const { user, roles, loading } = useAuth()
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>
   if (!user) return <Navigate to="/login" replace />
   return children
 }
 
 function RequireAdmin({ children }) {
-  const { user } = useAuth()
+  const { user, roles, loading } = useAuth()
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>
   if (!user) return <Navigate to="/login" replace />
-  if (user.role !== 'ADMIN') return <Navigate to="/home" replace />
+  if (roles[0] !== 'ADMIN') return <Navigate to="/home" replace />
   return children
 }
 
 function RootRedirect() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading...</div>
   if (!user) return <LandingPage />
   if (user.role === 'ADMIN') return <Navigate to="/admin" replace />
   return <Navigate to="/home" replace />

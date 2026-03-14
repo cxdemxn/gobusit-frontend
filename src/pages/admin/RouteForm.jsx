@@ -1,29 +1,57 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Trash2, Plus, Pencil } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import { mockRoutes, mockRoutePoints } from '../../mock/data'
+import { routeService } from '../../services/routeService'
 
 export default function RouteForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
-  const existing = isEdit ? mockRoutes.find(r => r.id === Number(id)) : null
+  const [existing, setExisting] = useState(null)
+  const [loading, setLoading] = useState(isEdit)
 
   const [form, setForm] = useState({
-    origin: existing?.origin || '',
-    destination: existing?.destination || '',
-    distanceKm: existing?.distanceKm || '',
-    durationMinutes: existing?.durationMinutes || '',
+    origin: '',
+    destination: '',
+    distanceKm: '',
+    durationMinutes: '',
   })
   const [errors, setErrors] = useState({})
-  const [stops, setStops] = useState(isEdit ? mockRoutePoints.filter(p => p.routeId === Number(id)) : [])
+  const [stops, setStops] = useState([])
   const [showDeleteRoute, setShowDeleteRoute] = useState(false)
   const [showDeleteStop, setShowDeleteStop] = useState(null)
   const [editStop, setEditStop] = useState(null)
   const [stopForm, setStopForm] = useState({ name: '', lat: '', lng: '' })
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (isEdit) {
+      const loadRoute = async () => {
+        try {
+          const [routeData, pointsData] = await Promise.all([
+            routeService.getById(id),
+            routeService.getPoints(id)
+          ])
+          setExisting(routeData)
+          setForm({
+            origin: routeData.origin || '',
+            destination: routeData.destination || '',
+            distanceKm: routeData.distanceKm || '',
+            durationMinutes: routeData.durationMinutes || '',
+          })
+          setStops(pointsData)
+        } catch (error) {
+          console.error('Failed to load route:', error)
+          navigate('/admin/routes')
+        } finally {
+          setLoading(false)
+        }
+      }
+      loadRoute()
+    }
+  }, [id, isEdit, navigate])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -43,38 +71,56 @@ export default function RouteForm() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setSaving(true)
     try {
-      // TODO: isEdit ? PUT /api/routes/:id : POST /api/routes
+      if (isEdit) {
+        await routeService.update(id, form)
+      } else {
+        const newRoute = await routeService.create(form)
+        if (newRoute.id) {
+          navigate(`/admin/routes/${newRoute.id}`)
+          return
+        }
+      }
       navigate('/admin/routes')
+    } catch (error) {
+      console.error('Failed to save route:', error)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDeleteRoute = () => {
-    // TODO: DELETE /api/routes/:id
-    navigate('/admin/routes')
-  }
-
-  const handleAddStop = () => {
-    if (!stopForm.name.trim() || !stopForm.lat || !stopForm.lng) return
-    const newStop = {
-      id: Date.now(),
-      routeId: Number(id),
-      sequence: stops.length + 1,
-      name: stopForm.name,
-      lat: Number(stopForm.lat),
-      lng: Number(stopForm.lng),
+  const handleDeleteRoute = async () => {
+    try {
+      await routeService.delete(id)
+      navigate('/admin/routes')
+    } catch (error) {
+      console.error('Failed to delete route:', error)
     }
-    // TODO: POST /api/routes/:id/points
-    setStops([...stops, newStop])
-    setStopForm({ name: '', lat: '', lng: '' })
-    setEditStop(null)
   }
 
-  const handleDeleteStop = (stopId) => {
-    // TODO: DELETE /api/routes/:id/points/:stopId
-    setStops(stops.filter(s => s.id !== stopId))
-    setShowDeleteStop(null)
+  const handleAddStop = async () => {
+    if (!stopForm.name.trim() || !stopForm.lat || !stopForm.lng) return
+    try {
+      const newStop = await routeService.addPoint(id, {
+        name: stopForm.name,
+        lat: Number(stopForm.lat),
+        lng: Number(stopForm.lng),
+      })
+      setStops([...stops, newStop])
+      setStopForm({ name: '', lat: '', lng: '' })
+      setEditStop(null)
+    } catch (error) {
+      console.error('Failed to add stop:', error)
+    }
+  }
+
+  const handleDeleteStop = async (stopId) => {
+    try {
+      await routeService.deletePoint(id, stopId)
+      setStops(stops.filter(s => s.id !== stopId))
+      setShowDeleteStop(null)
+    } catch (error) {
+      console.error('Failed to delete stop:', error)
+    }
   }
 
   return (

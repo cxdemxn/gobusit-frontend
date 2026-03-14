@@ -3,20 +3,39 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Bus, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
+const Field = ({ form, errors, handleChange, name, label, type = 'text', placeholder, helper }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <input
+      type={type}
+      name={name}
+      placeholder={placeholder}
+      value={form[name]}
+      onChange={handleChange}
+      className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+        errors[name] ? 'border-red-400' : 'border-gray-200'
+      }`}
+    />
+    {helper && !errors[name] && <p className="text-xs text-gray-400 mt-1">{helper}</p>}
+    {errors[name] && <p className="text-xs text-red-600 mt-1">{errors[name]}</p>}
+  </div>
+)
+
 export default function RegisterPage() {
-  const { setUser } = useAuth()
+  const { register } = useAuth()
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '',
+    firstName: '', lastName: '', email: '', phoneNumber: '', password: '', confirmPassword: '',
   })
   const [showPw, setShowPw] = useState(false)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-    setErrors({ ...errors, [e.target.name]: '' })
+    const { name, value } = e.target
+    setForm(prev => ({ ...prev, [name]: value }))
+    setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
   const validate = () => {
@@ -24,7 +43,8 @@ export default function RegisterPage() {
     if (!form.firstName.trim()) e.firstName = 'First name is required'
     if (!form.lastName.trim()) e.lastName = 'Last name is required'
     if (!form.email.trim()) e.email = 'Email is required'
-    if (!form.phone.trim()) e.phone = 'Phone number is required'
+    if (!form.phoneNumber
+      .trim()) e.phoneNumber = 'Phone number is required'
     if (form.password.length < 6) e.password = 'Password must be at least 6 characters'
     if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match'
     return e
@@ -33,38 +53,20 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validate()
+    console.log(errs)
     if (Object.keys(errs).length) { setErrors(errs); return }
+    console.log('we get here')
     setLoading(true)
     try {
-      // TODO: replace with real register call
-      // const user = await register({ firstName, lastName, email, phone, password })
-      const { mockUser } = await import('../mock/data')
-      setUser({ ...mockUser, firstName: form.firstName, lastName: form.lastName })
+      const { firstName, lastName, email, phoneNumber, password } = form
+      await register({ firstName, lastName, email, phoneNumber, password })
       navigate('/home', { replace: true })
     } catch (err) {
-      setErrors({ phone: 'An account with this phone number already exists.' })
+      setErrors({ phoneNumber: err.message || 'An account with this phone number already exists.' })
     } finally {
       setLoading(false)
     }
   }
-
-  const Field = ({ name, label, type = 'text', placeholder, helper }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        type={type}
-        name={name}
-        placeholder={placeholder}
-        value={form[name]}
-        onChange={handleChange}
-        className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-          errors[name] ? 'border-red-400' : 'border-gray-200'
-        }`}
-      />
-      {helper && !errors[name] && <p className="text-xs text-gray-400 mt-1">{helper}</p>}
-      {errors[name] && <p className="text-xs text-red-600 mt-1">{errors[name]}</p>}
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
@@ -80,12 +82,15 @@ export default function RegisterPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Field name="firstName" label="First Name" placeholder="Kofi" />
-              <Field name="lastName" label="Last Name" placeholder="Mensah" />
+              <Field form={form} errors={errors} handleChange={handleChange} name="firstName" label="First Name" placeholder="Kofi" />
+              <Field form={form} errors={errors} handleChange={handleChange} name="lastName" label="Last Name" placeholder="Mensah" />
             </div>
-            <Field name="email" label="Email Address" type="email" placeholder="you@example.com" />
+            <Field form={form} errors={errors} handleChange={handleChange} name="email" label="Email Address" type="email" placeholder="you@example.com" />
             <Field
-              name="phone"
+              form={form}
+              errors={errors}
+              handleChange={handleChange}
+              name="phoneNumber"
               label="Phone Number"
               type="tel"
               placeholder="+229 61 000 001"

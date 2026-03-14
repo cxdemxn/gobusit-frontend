@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import { mockAllTickets } from '../../mock/data'
+import { ticketService } from '../../services/ticketService'
 
 const fmt = (dt) => new Date(dt).toLocaleString('en-GB', {
   day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -13,17 +13,38 @@ const fmt = (dt) => new Date(dt).toLocaleString('en-GB', {
 export default function AdminTicketDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [ticket, setTicket] = useState(mockAllTickets.find(t => t.id === id))
+  const [ticket, setTicket] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [showConfirm, setShowConfirm] = useState(false)
 
+  useEffect(() => {
+    const loadTicket = async () => {
+      try {
+        const ticketData = await ticketService.getById(id)
+        setTicket(ticketData)
+      } catch (error) {
+        console.error('Failed to load ticket:', error)
+        navigate('/admin/tickets')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTicket()
+  }, [id, navigate])
+
+  if (loading) return <AdminLayout><div className="text-center py-16 text-gray-400">Loading...</div></AdminLayout>
   if (!ticket) return <AdminLayout><div className="text-center py-16 text-gray-400">Ticket not found.</div></AdminLayout>
 
   const { schedule } = ticket
 
-  const handleCancel = () => {
-    // TODO: DELETE /api/admin/tickets/:id  (or POST /api/admin/tickets/:id/cancel)
-    setTicket({ ...ticket, status: 'CANCELLED' })
-    setShowConfirm(false)
+  const handleCancel = async () => {
+    try {
+      await ticketService.cancel(id)
+      setTicket({ ...ticket, status: 'CANCELLED' })
+      setShowConfirm(false)
+    } catch (error) {
+      console.error('Failed to cancel ticket:', error)
+    }
   }
 
   const Row = ({ label, value }) => (
