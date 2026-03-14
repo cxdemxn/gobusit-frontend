@@ -13,10 +13,10 @@ export default function RouteForm() {
   const [loading, setLoading] = useState(isEdit)
 
   const [form, setForm] = useState({
-    origin: '',
-    destination: '',
+    originName: '',
+    destinationName: '',
     distanceKm: '',
-    durationMinutes: '',
+    estimatedDurationMin: '',
   })
   const [errors, setErrors] = useState({})
   const [stops, setStops] = useState([])
@@ -36,10 +36,10 @@ export default function RouteForm() {
           ])
           setExisting(routeData)
           setForm({
-            origin: routeData.origin || '',
-            destination: routeData.destination || '',
+            originName: routeData.originName || '',
+            destinationName: routeData.destinationName || '',
             distanceKm: routeData.distanceKm || '',
-            durationMinutes: routeData.durationMinutes || '',
+            estimatedDurationMin: routeData.estimatedDurationMin || '',
           })
           setStops(pointsData)
         } catch (error) {
@@ -60,8 +60,8 @@ export default function RouteForm() {
 
   const validate = () => {
     const e = {}
-    if (!form.origin.trim()) e.origin = 'Origin is required'
-    if (!form.destination.trim()) e.destination = 'Destination is required'
+    if (!form.originName.trim()) e.originName = 'Origin is required'
+    if (!form.destinationName.trim()) e.destinationName = 'Destination is required'
     return e
   }
 
@@ -80,7 +80,7 @@ export default function RouteForm() {
           return
         }
       }
-      navigate('/admin/routes')
+      navigate(`/admin/routes/${id}`)
     } catch (error) {
       console.error('Failed to save route:', error)
     } finally {
@@ -100,10 +100,16 @@ export default function RouteForm() {
   const handleAddStop = async () => {
     if (!stopForm.name.trim() || !stopForm.lat || !stopForm.lng) return
     try {
+      // Calculate next sequence order based on existing stops
+      const nextSequenceOrder = stops.length > 0 
+        ? Math.max(...stops.map(s => s.sequenceOrder || 0)) + 1 
+        : 1
+      
       const newStop = await routeService.addPoint(id, {
-        name: stopForm.name,
-        lat: Number(stopForm.lat),
-        lng: Number(stopForm.lng),
+        stopName: stopForm.name,
+        latitude: Number(stopForm.lat),
+        longitude: Number(stopForm.lng),
+        sequenceOrder: nextSequenceOrder
       })
       setStops([...stops, newStop])
       setStopForm({ name: '', lat: '', lng: '' })
@@ -114,14 +120,19 @@ export default function RouteForm() {
   }
 
   const handleDeleteStop = async (stopId) => {
-    try {
-      await routeService.deletePoint(id, stopId)
-      setStops(stops.filter(s => s.id !== stopId))
-      setShowDeleteStop(null)
-    } catch (error) {
-      console.error('Failed to delete stop:', error)
-    }
+  setShowDeleteStop(null)
+  try {
+    await routeService.deletePoint(id, stopId)
+    setStops(prev => {
+      console.log('stops before filter:', prev)
+      console.log('filtering out stopId:', stopId)
+      console.log('types:', typeof prev[0]?.uuid, typeof stopId)
+      return prev.filter(s => s.uuid !== stopId)
+    })
+  } catch (error) {
+    console.error('Failed to delete stop:', error)
   }
+}
 
   return (
     <AdminLayout>
@@ -160,15 +171,15 @@ export default function RouteForm() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Origin</label>
-                <input name="origin" value={form.origin} onChange={handleChange} placeholder="Cotonou"
-                  className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.origin ? 'border-red-400' : 'border-gray-200'}`} />
-                {errors.origin && <p className="text-xs text-red-600 mt-1">{errors.origin}</p>}
+                <input name="originName" value={form.originName} onChange={handleChange} placeholder="Cotonou"
+                  className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.originName ? 'border-red-400' : 'border-gray-200'}`} />
+                {errors.originName && <p className="text-xs text-red-600 mt-1">{errors.originName}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
-                <input name="destination" value={form.destination} onChange={handleChange} placeholder="Lagos"
-                  className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.destination ? 'border-red-400' : 'border-gray-200'}`} />
-                {errors.destination && <p className="text-xs text-red-600 mt-1">{errors.destination}</p>}
+                <input name="destinationName" value={form.destinationName} onChange={handleChange} placeholder="Lagos"
+                  className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.destinationName ? 'border-red-400' : 'border-gray-200'}`} />
+                {errors.destinationName && <p className="text-xs text-red-600 mt-1">{errors.destinationName}</p>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -179,7 +190,7 @@ export default function RouteForm() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
-                <input type="number" name="durationMinutes" value={form.durationMinutes} onChange={handleChange} placeholder="180"
+                <input type="number" name="estimatedDurationMin" value={form.estimatedDurationMin} onChange={handleChange} placeholder="180"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
@@ -200,15 +211,15 @@ export default function RouteForm() {
             ) : (
               <div className="space-y-2">
                 {stops.map((stop, i) => (
-                  <div key={stop.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                  <div key={stop.uuid} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
                     <span className="w-6 h-6 flex items-center justify-center bg-blue-600 text-white text-xs font-bold rounded-full flex-shrink-0">
-                      {stop.sequence}
+                      {stop.sequenceOrder}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{stop.name}</p>
-                      <p className="text-xs text-gray-400">{stop.lat}, {stop.lng}</p>
+                      <p className="text-sm font-semibold text-gray-900">{stop.stopName}</p>
+                      <p className="text-xs text-gray-400">{stop.latitude}, {stop.longitude}</p>
                     </div>
-                    <button onClick={() => setShowDeleteStop(stop.id)} className="text-gray-400 hover:text-red-500 transition">
+                    <button onClick={() => setShowDeleteStop(stop.uuid)} className="text-gray-400 hover:text-red-500 transition">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

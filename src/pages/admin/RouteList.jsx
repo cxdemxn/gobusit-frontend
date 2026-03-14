@@ -56,13 +56,13 @@ export default function RouteList() {
               <tbody>
                 {routes.map(r => (
                   <tr
-                    key={r.id}
-                    onClick={() => navigate(`/admin/routes/${r.id}`)}
+                    key={r.uuid}
+                    onClick={() => navigate(`/admin/routes/${r.uuid}`)}
                     className="border-b border-gray-50 last:border-0 hover:bg-gray-50 cursor-pointer transition"
                   >
-                    <td className="px-5 py-3.5 font-semibold text-gray-900">{r.origin} → {r.destination}</td>
+                    <td className="px-5 py-3.5 font-semibold text-gray-900">{r.originName} → {r.destinationName}</td>
                     <td className="px-4 py-3.5 text-gray-500">{r.distanceKm ? `${r.distanceKm} km` : '—'}</td>
-                    <td className="px-4 py-3.5 text-gray-500">{r.durationMinutes ? `${r.durationMinutes} min` : '—'}</td>
+                    <td className="px-4 py-3.5 text-gray-500">{r.estimatedDurationMin ? `${r.estimatedDurationMin} min` : '—'}</td>
                     <td className="px-4 py-3.5 text-right"><ChevronRight className="w-4 h-4 text-gray-300 ml-auto" /></td>
                   </tr>
                 ))}

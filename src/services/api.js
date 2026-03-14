@@ -40,7 +40,9 @@ const apiRequest = async (endpoint, options = {}) => {
       throw new ApiError(errorData.message || `HTTP ${response.status}`, response.status)
     }
 
-    return await response.json()
+    // Handle 204 No Content and other empty responses
+    const text = await response.text()
+    return text ? JSON.parse(text) : null
   } catch (error) {
     if (error instanceof ApiError) throw error
     throw new ApiError('Network error occurred')

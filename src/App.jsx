@@ -28,6 +28,7 @@ import UserList from './pages/admin/UserList'
 import UserDetail from './pages/admin/UserDetail'
 import AdminTicketList from './pages/admin/AdminTicketList'
 import AdminTicketDetail from './pages/admin/AdminTicketDetail'
+import RouteDetail from './pages/admin/RouteDetail'
 
 // Route guards
 function RequireAuth({ children }) {
@@ -81,7 +82,8 @@ function AppRoutes() {
       <Route path="/admin/buses/:id" element={<RequireAdmin><BusForm /></RequireAdmin>} />
       <Route path="/admin/routes" element={<RequireAdmin><RouteList /></RequireAdmin>} />
       <Route path="/admin/routes/new" element={<RequireAdmin><RouteForm /></RequireAdmin>} />
-      <Route path="/admin/routes/:id" element={<RequireAdmin><RouteForm /></RequireAdmin>} />
+      <Route path="/admin/routes/:id" element={<RequireAdmin><RouteDetail /></RequireAdmin>} />
+      <Route path="/admin/routes/:id/edit" element={<RequireAdmin><RouteForm /></RequireAdmin>} />
       <Route path="/admin/schedules" element={<RequireAdmin><ScheduleList /></RequireAdmin>} />
       <Route path="/admin/schedules/new" element={<RequireAdmin><ScheduleForm /></RequireAdmin>} />
       <Route path="/admin/schedules/:id" element={<RequireAdmin><AdminScheduleDetail /></RequireAdmin>} />
