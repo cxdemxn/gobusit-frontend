@@ -25,6 +25,7 @@ export default function BusForm() {
     if (isEdit) {
       const loadBus = async () => {
         try {
+          console.log(id)
           const data = await busService.getById(id)
           setExisting(data)
           setForm({

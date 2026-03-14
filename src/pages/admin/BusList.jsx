@@ -76,7 +76,7 @@ export default function BusList() {
                 {filteredBuses.map(bus => (
                   <tr
                     key={bus.id}
-                    onClick={() => navigate(`/admin/buses/${bus.id}`)}
+                    onClick={() => navigate(`/admin/buses/${bus.uuid}`)}
                     className="border-b border-gray-50 last:border-0 hover:bg-gray-50 cursor-pointer transition"
                   >
                     <td className="px-5 py-3.5 font-semibold text-gray-900">{bus.plateNumber}</td>
