@@ -45,7 +45,8 @@ export default function ScheduleList() {
           scheduleService.getAll({ routeId: routeFilter, status: statusFilter, date: dateFilter, page }),
           routeService.getAll()
         ])
-        setSchedules(schedulesData.content || schedulesData)
+        const content = schedulesData.content || schedulesData
+        setSchedules([...content].sort((a, b) => new Date(b.departureTime) - new Date(a.departureTime)))
         setRoutes(routesData)
         setTotalPages(schedulesData.totalPages || 1)
       } catch (error) {

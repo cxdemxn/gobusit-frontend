@@ -39,10 +39,9 @@ export default function AdminTicketList() {
           ticketService.getAll({ status: statusFilter, scheduleId: scheduleFilter, page }),
           scheduleService.getAll()
         ])
-        setTickets(ticketsData.content || ticketsData)
+        const content = ticketsData.content || ticketsData
+        setTickets([...content].sort((a, b) => new Date(b.bookingTime) - new Date(a.bookingTime)))
         setSchedules(schedulesData.content || schedulesData)
-        console.log('Schedules loaded:', schedulesData.content || schedulesData)
-        console.log('Schedule filter:', scheduleFilter)
         setTotalPages(ticketsData.totalPages || 1)
       } catch (error) {
         console.error('Failed to load data:', error)
