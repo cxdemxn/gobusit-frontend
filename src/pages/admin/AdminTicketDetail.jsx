@@ -35,7 +35,6 @@ export default function AdminTicketDetail() {
   if (loading) return <AdminLayout><div className="text-center py-16 text-gray-400">Loading...</div></AdminLayout>
   if (!ticket) return <AdminLayout><div className="text-center py-16 text-gray-400">Ticket not found.</div></AdminLayout>
 
-  const { schedule } = ticket
 
   const handleCancel = async () => {
     try {
@@ -92,19 +91,19 @@ export default function AdminTicketDetail() {
 
           <div>
             <p className="text-xs text-gray-400 uppercase font-semibold tracking-wide mb-3">Passenger</p>
-            <Row label="Name" value={`${ticket.passenger.firstName} ${ticket.passenger.lastName}`} />
-            <Row label="Email" value={ticket.passenger.email} />
+            <Row label="Name" value={ticket.passengerName} />
+            <Row label="Phone" value={ticket.passengerPhone} />
           </div>
 
           <div className="mt-2">
             <p className="text-xs text-gray-400 uppercase font-semibold tracking-wide mb-1 mt-4">Journey</p>
-            <Row label="Route" value={`${schedule.route.origin} → ${schedule.route.destination}`} />
-            <Row label="Departure" value={fmt(schedule.departureTime)} />
-            <Row label="Arrival" value={fmt(schedule.arrivalTime)} />
-            <Row label="Bus" value={schedule.bus.plateNumber} />
+            <Row label="Route" value={`${ticket.originName} → ${ticket.destinationName}`} />
+            <Row label="Departure" value={fmt(ticket.departureTime)} />
+            <Row label="Arrival" value={fmt(ticket.arrivalTime)} />
+            <Row label="Bus" value={ticket.plateNumber} />
             <Row label="Seat" value={ticket.seatNumber} />
             <Row label="Price" value={`${ticket.price.toLocaleString()} FCFA`} />
-            <Row label="Booked At" value={fmt(ticket.bookedAt)} />
+            <Row label="Booked At" value={fmt(ticket.bookingTime)} />
           </div>
         </div>
 

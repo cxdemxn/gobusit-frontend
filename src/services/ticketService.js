@@ -4,10 +4,10 @@ export const ticketService = {
   // Admin endpoints
   getAll: async (filters = {}) => {
     const params = new URLSearchParams()
-    if (filters.status) params.append('status', filters.status)
+    if (filters.status && filters.status !== 'ALL') params.append('status', filters.status)
     if (filters.scheduleId) params.append('scheduleId', filters.scheduleId)
     if (filters.userId) params.append('userId', filters.userId)
-    if (filters.page) params.append('page', filters.page)
+    if (filters.page) params.append('page', filters.page - 1)
     
     const query = params.toString()
     return await api.get(`/api/admin/tickets${query ? '?' + query : ''}`)

@@ -8,7 +8,7 @@ import Paginator from '../../components/ui/Paginator'
 import { ticketService } from '../../services/ticketService'
 import { scheduleService } from '../../services/scheduleService'
 
-const fmt = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+const fmt = (dt) => new Date(dt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 const STATUSES = ['ALL', 'BOOKED', 'CANCELLED', 'USED']
 
@@ -22,6 +22,16 @@ export default function AdminTicketList() {
   const [loading, setLoading] = useState(true)
   const [totalPages, setTotalPages] = useState(1)
 
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  const handleScheduleFilterChange = (value) => {
+    setScheduleFilter(value)
+    setPage(1)
+  }
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -30,7 +40,9 @@ export default function AdminTicketList() {
           scheduleService.getAll()
         ])
         setTickets(ticketsData.content || ticketsData)
-        setSchedules(schedulesData)
+        setSchedules(schedulesData.content || schedulesData)
+        console.log('Schedules loaded:', schedulesData.content || schedulesData)
+        console.log('Schedule filter:', scheduleFilter)
         setTotalPages(ticketsData.totalPages || 1)
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -51,15 +63,15 @@ export default function AdminTicketList() {
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3">
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          <select value={statusFilter} onChange={e => handleStatusFilterChange(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             {STATUSES.map(s => <option key={s} value={s}>{s === 'ALL' ? 'All Statuses' : s}</option>)}
           </select>
-          <select value={scheduleFilter} onChange={e => setScheduleFilter(e.target.value)}
+          <select value={scheduleFilter} onChange={e => handleScheduleFilterChange(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">All Schedules</option>
             {schedules.map(s => (
-              <option key={s.id} value={s.id}>{s.route.origin} → {s.route.destination} ({fmt(s.departureTime)})</option>
+              <option key={s.id} value={s.id}>{s.originName} → {s.destinationName} ({fmt(s.departureTime)})</option>
             ))}
           </select>
         </div>
@@ -86,13 +98,13 @@ export default function AdminTicketList() {
                     <tr key={t.id} onClick={() => navigate(`/admin/tickets/${t.id}`)}
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50 cursor-pointer transition">
                       <td className="px-5 py-3.5">
-                        <p className="font-medium text-gray-900">{t.passenger.firstName} {t.passenger.lastName}</p>
-                        <p className="text-xs text-gray-400">{t.passenger.email}</p>
+                        <p className="font-medium text-gray-900">{t.passengerName}</p>
+                        <p className="text-xs text-gray-400">{t.userPhoneNumber}</p>
                       </td>
-                      <td className="px-4 py-3.5 text-gray-700">{t.schedule.route.origin} → {t.schedule.route.destination}</td>
-                      <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{fmt(t.schedule.departureTime)}</td>
+                      <td className="px-4 py-3.5 text-gray-700">{t.originName} → {t.destinationName}</td>
+                      <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{fmt(t.departureTime)}</td>
                       <td className="px-4 py-3.5 text-center font-semibold text-gray-900">{t.seatNumber}</td>
-                      <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{fmt(t.bookedAt)}</td>
+                      <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{fmt(t.bookingTime)}</td>
                       <td className="px-4 py-3.5"><Badge status={t.status} /></td>
                       <td className="px-4 py-3.5 text-right"><ChevronRight className="w-4 h-4 text-gray-300 ml-auto" /></td>
                     </tr>
