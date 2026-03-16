@@ -16,7 +16,7 @@ export default function BookingConfirmation() {
     return null
   }
 
-  const { id, schedule, seatNumber, price, status, bookedAt } = ticket
+  const { id, seatNumber, price, status, bookingTime, originName, destinationName, departureTime, arrivalTime } = ticket
 
   return (
     <PassengerLayout>
@@ -45,16 +45,16 @@ export default function BookingConfirmation() {
           <div className="px-5 py-5 space-y-4">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">Route</p>
-              <p className="font-bold text-gray-900">{schedule.route.origin} → {schedule.route.destination}</p>
+              <p className="font-bold text-gray-900">{originName} → {destinationName}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Departure</p>
-                <p className="text-sm font-semibold text-gray-900">{fmt(schedule.departureTime)}</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(departureTime)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Arrival</p>
-                <p className="text-sm font-semibold text-gray-900">{fmt(schedule.arrivalTime)}</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(arrivalTime)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Seat Number</p>
@@ -71,7 +71,7 @@ export default function BookingConfirmation() {
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">Booked at</p>
-              <p className="text-xs text-gray-600">{fmt(bookedAt)}</p>
+              <p className="text-xs text-gray-600">{fmt(bookingTime)}</p>
             </div>
           </div>
         </div>

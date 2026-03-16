@@ -30,8 +30,9 @@ export default function ScheduleResults({ schedules, loading, availableSeats, na
     return (
       <div className="space-y-3">
         {schedules.map(s => {
-          const seats = availableSeats(s)
+          const seats = s.availableSeats
           const full = seats <= 0
+          console.log(s)
           return (
             <button
               key={s.id}

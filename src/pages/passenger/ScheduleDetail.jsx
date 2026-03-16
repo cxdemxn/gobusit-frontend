@@ -80,6 +80,7 @@ export default function ScheduleDetail() {
         state: { ticket }
       })
     } catch (err) {
+      console.log(err)
       if (err.status === 409) {
         setSeatError(`Sorry, seat ${selectedSeat} was just taken. Please choose another seat.`)
         setSelectedSeat(null)

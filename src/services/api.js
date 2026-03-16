@@ -36,6 +36,7 @@ const apiRequest = async (endpoint, options = {}) => {
     })
 
     if (!response.ok) {
+      console.log(await response.json())
       const errorData = await response.json().catch(() => ({}))
       throw new ApiError(errorData.message || `HTTP ${response.status}`, response.status)
     }

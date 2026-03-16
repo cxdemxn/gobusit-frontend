@@ -11,6 +11,9 @@ import ScheduleResults from './ScheduleResults'
 const fmt = (dt) => new Date(dt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 const fmtDate = (dt) => new Date(dt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
+const sortByDeparture = (data) =>
+  [...data].sort((a, b) => new Date(b.departureTime) - new Date(a.departureTime))
+
 export default function ScheduleSearch() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -27,7 +30,7 @@ export default function ScheduleSearch() {
       setLoading(true)
       try {
         const data = await passengerScheduleService.getAll({})
-        setSchedules(data)
+        setSchedules(sortByDeparture(data))
       } catch (error) {
         console.error('Failed to load initial schedules:', error)
         setSchedules([])
@@ -36,7 +39,7 @@ export default function ScheduleSearch() {
       }
     }
     loadInitialSchedules()
-  }, []) // Run only once on mount
+  }, [])
 
   // Debounced search effect
   useEffect(() => {
@@ -46,7 +49,7 @@ export default function ScheduleSearch() {
           setLoading(true)
           try {
             const data = await passengerScheduleService.getAll({ originName, destinationName, date })
-            setSchedules(data)
+            setSchedules(sortByDeparture(data))
           } catch (error) {
             console.error('Failed to load schedules:', error)
             setSchedules([])
@@ -56,12 +59,11 @@ export default function ScheduleSearch() {
         }
         loadSchedules()
       } else {
-        // Reset to all schedules when filters are cleared
         const loadAllSchedules = async () => {
           setLoading(true)
           try {
             const data = await passengerScheduleService.getAll({})
-            setSchedules(data)
+            setSchedules(sortByDeparture(data))
           } catch (error) {
             console.error('Failed to load all schedules:', error)
             setSchedules([])
@@ -71,12 +73,13 @@ export default function ScheduleSearch() {
         }
         loadAllSchedules()
       }
-    }, 300) // 300ms debounce
+    }, 300)
 
     return () => clearTimeout(timer)
   }, [originName, destinationName, date, searchTrigger])
 
   const availableSeats = (s) => s.totalSeats - s.bookedSeats
+  console.log(availableSeats)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -146,12 +149,12 @@ function Content({ navigate, originName, setOriginName, destinationName, setDest
         </div>
       </div>
 
-      {/* Results - This is now a separate component */}
-      <ScheduleResults 
-        schedules={schedules} 
-        loading={loading} 
-        availableSeats={availableSeats} 
-        navigate={navigate} 
+      {/* Results */}
+      <ScheduleResults
+        schedules={schedules}
+        loading={loading}
+        availableSeats={availableSeats}
+        navigate={navigate}
       />
     </div>
   )
