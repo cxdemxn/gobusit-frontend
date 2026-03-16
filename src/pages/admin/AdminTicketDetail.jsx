@@ -91,8 +91,8 @@ export default function AdminTicketDetail() {
 
           <div>
             <p className="text-xs text-gray-400 uppercase font-semibold tracking-wide mb-3">Passenger</p>
-            <Row label="Name" value={ticket.passengerName} />
-            <Row label="Phone" value={ticket.passengerPhone} />
+            <Row label="Name" value={`${ticket.userFirstName.charAt(0).toUpperCase() + ticket.userFirstName.slice(1)}  ${ticket.userLastName.charAt(0).toUpperCase() + ticket.userLastName.slice(1)}`} />
+            <Row label="Phone" value={ticket.userPhoneNumber} />
           </div>
 
           <div className="mt-2">
