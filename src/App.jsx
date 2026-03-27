@@ -23,12 +23,14 @@ import RouteList from './pages/admin/RouteList'
 import RouteForm from './pages/admin/RouteForm'
 import ScheduleList from './pages/admin/ScheduleList'
 import AdminScheduleDetail from './pages/admin/ScheduleDetail'
-import ScheduleForm from './pages/admin/ScheduleForm'
 import UserList from './pages/admin/UserList'
 import UserDetail from './pages/admin/UserDetail'
 import AdminTicketList from './pages/admin/AdminTicketList'
 import AdminTicketDetail from './pages/admin/AdminTicketDetail'
 import RouteDetail from './pages/admin/RouteDetail'
+import ScheduleTemplateList from './pages/admin/ScheduleTemplateList'
+import ScheduleTemplateForm from './pages/admin/ScheduleTemplateForm'
+import ScheduleTemplateDetail from './pages/admin/ScheduleTemplateDetail'
 
 // Route guards
 function RequireAuth({ children }) {
@@ -85,8 +87,10 @@ function AppRoutes() {
       <Route path="/admin/routes/:id" element={<RequireAdmin><RouteDetail /></RequireAdmin>} />
       <Route path="/admin/routes/:id/edit" element={<RequireAdmin><RouteForm /></RequireAdmin>} />
       <Route path="/admin/schedules" element={<RequireAdmin><ScheduleList /></RequireAdmin>} />
-      <Route path="/admin/schedules/new" element={<RequireAdmin><ScheduleForm /></RequireAdmin>} />
       <Route path="/admin/schedules/:id" element={<RequireAdmin><AdminScheduleDetail /></RequireAdmin>} />
+      <Route path="/admin/schedule-templates" element={<RequireAdmin><ScheduleTemplateList /></RequireAdmin>} />
+      <Route path="/admin/schedule-templates/new" element={<RequireAdmin><ScheduleTemplateForm /></RequireAdmin>} />
+      <Route path="/admin/schedule-templates/:id" element={<RequireAdmin><ScheduleTemplateDetail /></RequireAdmin>} />
       <Route path="/admin/users" element={<RequireAdmin><UserList /></RequireAdmin>} />
       <Route path="/admin/users/:id" element={<RequireAdmin><UserDetail /></RequireAdmin>} />
       <Route path="/admin/tickets" element={<RequireAdmin><AdminTicketList /></RequireAdmin>} />
