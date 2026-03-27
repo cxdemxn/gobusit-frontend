@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
@@ -66,12 +66,6 @@ export default function ScheduleList() {
             <h1 className="text-2xl font-extrabold text-gray-900">Schedules</h1>
             <p className="text-gray-400 text-sm mt-0.5">Manage all trip schedules</p>
           </div>
-          <button
-            onClick={() => navigate('/admin/schedules/new')}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition"
-          >
-            <Plus className="w-4 h-4" /> Create Schedule
-          </button>
         </div>
 
         {/* Filters */}
