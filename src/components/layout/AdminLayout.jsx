@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Bus, Route, Calendar, Users, Ticket, LayoutDashboard, LogOut, Menu, X } from 'lucide-react'
+import { Bus, Route, Calendar, CalendarDays, Users, Ticket, LayoutDashboard, LogOut, Menu, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
 
@@ -8,6 +8,7 @@ const nav = [
   { to: '/admin/buses', icon: Bus, label: 'Buses' },
   { to: '/admin/routes', icon: Route, label: 'Routes' },
   { to: '/admin/schedules', icon: Calendar, label: 'Schedules' },
+  { to: '/admin/schedule-templates', icon: CalendarDays, label: 'Templates' },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/tickets', icon: Ticket, label: 'Tickets' },
 ]
